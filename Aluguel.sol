@@ -20,4 +20,9 @@ contract Aluguel {
         valor = valorDoAluguel;
 }
 
+    function valorAtualDoAluguel () public view returns (uint256) {
+        return valor;
+        
+    }
+
 }
