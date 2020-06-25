@@ -1,0 +1,22 @@
+// SPDX-License-Identifier: GLP-3.0
+pragma solidity 0.6.10;
+
+contract CompraEVenda {
+    
+    string public comprador;
+    string public vendedor;
+    uint256 public preco;
+    
+    constructor (
+        string memory nomeComprador, 
+        string memory nomeVendedor,
+        uint256 precoDeAquisicao
+        )
+        public {
+            comprador = nomeComprador;
+            vendedor = nomeVendedor;
+            preco = precoDeAquisicao;
+        }
+        
+    
+}
