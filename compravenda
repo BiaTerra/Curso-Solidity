@@ -6,6 +6,8 @@ contract CompraEVenda {
     string public comprador;
     string public vendedor;
     uint256 public preco;
+    uint256 public constant parcelas = 10;
+    uint256 public valorParcela;
     
     constructor (
         string memory nomeComprador, 
@@ -16,7 +18,14 @@ contract CompraEVenda {
             comprador = nomeComprador;
             vendedor = nomeVendedor;
             preco = precoDeAquisicao;
+            valorParcela = preco/parcelas;
         }
         
-    
+    function ajustaPreco (uint256 debitoIPTU) public {
+        if (debitoIPTU > 0) {
+        preco = preco - debitoIPTU;
+        valorParcela = preco/parcelas;
+        }
+    }
+   
 }
