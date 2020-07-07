@@ -45,7 +45,7 @@ contract CompraEVenda {
        require (now <= prazoPreferencia, "Decorrido o prazo legal para exercício do direito de preferência."); // cf. art. 28 da Lei Federal nº 8.245/1991
        require (msg.value == preco, "O direito de preferência deve ser exercício em igual condição a terceiros."); // cf. art. 27 da Lei Federal nº 8.245/1991
        require (!preferenciaExercida, "Direito de preferência já exercido por outro locatário.");
-       locatarioComprador.contaVendedor.transfer;
+       locatarioComprador.contaVendedor.transfer(preco);
        preferenciaExercida = true;
     }
    
@@ -53,7 +53,7 @@ contract CompraEVenda {
        require (now > prazoPreferencia, "Aguardar transcurso do prazo legal para exercício de preferência dos locatários.");
        require (!preferenciaExercida, "Direito de preferência exercido por locatário.");
        require (msg.sender == contaComprador);
-       comprador.contaVedndedor.transfer;
+       comprador.contaVendedor.transfer(preco);
        }
    
 }
