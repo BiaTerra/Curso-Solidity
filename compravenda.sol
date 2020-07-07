@@ -22,15 +22,13 @@ contract CompraEVenda {
         string memory nomeComprador, 
         string memory nomeVendedor,
         uint256 precoDeAquisicao,
-        address payable contaDoVendedor,
-        address payable contaDoComprador
+        address payable contaDoVendedor
         )
         public {
             comprador = nomeComprador;
             vendedor = nomeVendedor;
             preco = precoDeAquisicao;
             contaDoVendedor = contaVendedor;
-            contaDoComprador = contaComprador;
             valorParcela = preco/parcelas;
         }
         
@@ -41,11 +39,10 @@ contract CompraEVenda {
         }
     }
    
-   function exercerPreferencia (string memory locatarioComprador) public payable {
+   function exercerPreferencia () public payable {
        require (now <= prazoPreferencia, "Decorrido o prazo legal para exercício do direito de preferência."); // cf. art. 28 da Lei Federal nº 8.245/1991
        require (msg.value == preco, "O direito de preferência deve ser exercício em igual condição a terceiros."); // cf. art. 27 da Lei Federal nº 8.245/1991
        require (!preferenciaExercida, "Direito de preferência já exercido por outro locatário.");
-       locatarioComprador.contaVendedor.transfer(preco);
        preferenciaExercida = true;
     }
    
@@ -53,7 +50,7 @@ contract CompraEVenda {
        require (now > prazoPreferencia, "Aguardar transcurso do prazo legal para exercício de preferência dos locatários.");
        require (!preferenciaExercida, "Direito de preferência exercido por locatário.");
        require (msg.sender == contaComprador);
-       comprador.contaVendedor.transfer(preco);
+       require (msg.value == preco, "Valor diferente do acordado.");
        }
    
 }
