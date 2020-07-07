@@ -6,6 +6,7 @@ contract CompraEVenda {
     struct Locatario {
         string nomeLocatario;
         string imovelAlugado;
+        address endereco;
     }
     
     string public comprador;
@@ -17,6 +18,9 @@ contract CompraEVenda {
     uint256 public valorParcela;
     uint256 public prazoPreferencia = now + 2592000;
     bool public preferenciaExercida;
+    Locatario[] public locatarios; 
+    
+    event exercidaAPreferencia (address locatarioComprador);
     
     constructor (
         string memory nomeComprador, 
@@ -39,11 +43,18 @@ contract CompraEVenda {
         }
     }
    
-   function exercerPreferencia () public payable {
+   function registraLocatario (string memory _nomeLocatario, string memory _imovelAlugado, address _endereco) public {
+       Locatario memory locTemp = Locatario (_nomeLocatario, _imovelAlugado, _endereco);
+       locatarios.push(locTemp);
+   }
+   
+   function exercerPreferencia (uint256 _indiceImovel) public payable {
        require (now <= prazoPreferencia, "Decorrido o prazo legal para exercício do direito de preferência."); // cf. art. 28 da Lei Federal nº 8.245/1991
        require (msg.value == preco, "O direito de preferência deve ser exercício em igual condição a terceiros."); // cf. art. 27 da Lei Federal nº 8.245/1991
+       require (locatarios[_indiceImovel].endereco == msg.sender, "Operação somente autorizada para locatários.");
        require (!preferenciaExercida, "Direito de preferência já exercido por outro locatário.");
        preferenciaExercida = true;
+       emit exercidaAPreferencia (msg.sender);
     }
    
    function realizarAquisicao () public payable {
@@ -51,6 +62,5 @@ contract CompraEVenda {
        require (!preferenciaExercida, "Direito de preferência exercido por locatário.");
        require (msg.sender == contaComprador);
        require (msg.value == preco, "Valor diferente do acordado.");
-       }
-   
+    }
 }
