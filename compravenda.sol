@@ -1,3 +1,33 @@
+/*
+Projeto:
+
+Objetivo:
+- Regrar a compra e venda de um prédio, com diversas unidades autônomas locadas a diferentes pessoas;
+- Criar um mecanismo para possibilitar o exercício do direito de preferência pelos locatários;
+- Criar um mecanismo para possibilitar a denúncia das locações após a venda, caso todas as locações sejam passíveis de denúncia, ou para migrar o pagamento do aluguel ao novo proprietário;
+
+Partes:
+- Vendedor
+    - conta / payable
+    
+- Locatário(s)
+    - conta
+    - unidade autônoma alugada
+    - valor do aluguel
+    - passível de denúncia, cf. art. 8º da Lei Federal nº 8.245/1991
+        - contrato de locação vidente por prazo indeterminado
+        - contrato de locação que não contenha cláusula de vigência
+        - cláusula de vigência não averbada no Registro de Imóveis
+    
+- Comprador
+    - conta / payable
+    
+- Objeto
+    - imóvel
+        - nº da matrícula
+        - RI
+/*
+
 // SPDX-License-Identifier: GLP-3.0
 pragma solidity 0.6.10;
 
@@ -7,6 +37,10 @@ contract CompraEVenda {
         string nomeLocatario;
         string imovelAlugado;
         address endereco;
+        uint256 valorAluguel;
+        bool contratoVigentePorPrazoDeterminado;
+        bool haClausulaDeVigencia;
+        bool contratoAverbadoNoRI;
     }
     
     string public comprador;
@@ -16,11 +50,15 @@ contract CompraEVenda {
     uint256 public preco;
     uint256 public constant parcelas = 10;
     uint256 public valorParcela;
-    uint256 public prazoPreferencia = now + 2592000;
-    bool public preferenciaExercida;
-    Locatario[] public locatarios; 
+    uint256 public prazoPreferencia = now + 2592000; // Prazo do art. 28 da Lei Federal nº 8.245/1991
+    uint256 public prazoDenunciaLocacao = now + 10368000; // Prazo do §2º do art. 8º da Lei Federal nº 8.245/1991
+    bool public preferenciaExercida = false;
+    Locatario[] public locatarios;
+    bool public aquisicaoRealizada = false;
     
     event exercidaAPreferencia (address locatarioComprador);
+    event aquisicaoConcluida ();
+    event locacaoDenunciada (address locatarioDenunciado, string imovelDesocupado);
     
     constructor (
         string memory nomeComprador, 
@@ -43,8 +81,8 @@ contract CompraEVenda {
         }
     }
    
-   function registraLocatario (string memory _nomeLocatario, string memory _imovelAlugado, address _endereco) public {
-       Locatario memory locTemp = Locatario (_nomeLocatario, _imovelAlugado, _endereco);
+   function registraLocatario (string memory _nomeLocatario, string memory _imovelAlugado, address _endereco, uint256 _valorAluguel, bool _contratoVigentePorPrazoDeterminado, bool _haClausuladeVigencia, bool _contratoRegistradoNoRI) public {
+       Locatario memory locTemp = Locatario (_nomeLocatario, _imovelAlugado, _endereco, _valorAluguel, _contratoVigentePorPrazoDeterminado, _haClausuladeVigencia, _contratoRegistradoNoRI);
        locatarios.push(locTemp);
    }
    
@@ -62,5 +100,18 @@ contract CompraEVenda {
        require (!preferenciaExercida, "Direito de preferência exercido por locatário.");
        require (msg.sender == contaComprador);
        require (msg.value == preco, "Valor diferente do acordado.");
+       aquisicaoRealizada = true;
+       emit aquisicaoConcluida ();
+    }
+    
+    function verificarLocacaoPassivelDeDenuncia () view public returns (address[]) {
+        
+    }
+    
+    function denunciarLocacao () public {
+        require (now <= prazoDenunciaLocacao, "Decorrido o prazo para denúncia da locação.");
+        require (aquisicaoRealizada == true);
+        require (locatarios.!contratoVigentePorPrazoDeterminado, locatatios.!haClausulaDeVigencia, locatarios.!contratoAverbadoNoRI, "A legislação não permite a denúncia desta locação."); // Requisitos do art. 8º da Lei Federal nº 8.245/1991
+        emit locacaoDenunciada (address locatarioDenunciado, string imovelDesocupado);
     }
 }
