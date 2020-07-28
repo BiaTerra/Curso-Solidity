@@ -25,7 +25,22 @@ Partes:
 - Objeto
     - imóvel
         - nº da matrícula
-        - RI
+        - contribuinte
+
+- Eventos
+    - exercício da preferência
+    - aquisição concluída
+    - denúncia das locações 
+
+- Funções
+    - registrar imóveis
+    - registrar locatários
+    - exercer a preferência
+    - realizar aquisição
+    - verificar locações passíveis de denúncia
+    - denunciar locações
+    - pagar aluguel
+ 
 /*
 
 // SPDX-License-Identifier: GLP-3.0
