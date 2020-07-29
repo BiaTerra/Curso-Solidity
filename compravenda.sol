@@ -47,7 +47,8 @@ Partes:
 pragma solidity 0.6.10;
 
 contract CompraEVenda {
-    
+
+    // structs
     struct Locatario {
         string nomeLocatario;
         string imovelAlugado;
@@ -58,38 +59,61 @@ contract CompraEVenda {
         bool contratoAverbadoNoRI;
     }
     
-    string public comprador;
-    address payable public contaComprador;
-    string public vendedor;
+    struct Predio {
+        uint256 numeroMatricula;
+        string numeroContribuinte;
+        string unidadeAutonoma;
+    }
+    
+    // informações do vendedor
     address payable public contaVendedor;
+    
+    // informações do comprador
+    address payable public comprador;
+    modifier somenteComprador(){
+        require(comprador == msg.sender, "Somente o comprador pode realizar esta operação.");
+        _;
+    }
+    
+    // condições da aquisição
     uint256 public preco;
     uint256 public constant parcelas = 10;
+    uint256 public parcelasPagas;
     uint256 public valorParcela;
-    uint256 public prazoPreferencia = now + 2592000; // Prazo do art. 28 da Lei Federal nº 8.245/1991
-    uint256 public prazoDenunciaLocacao = now + 10368000; // Prazo do §2º do art. 8º da Lei Federal nº 8.245/1991
-    bool public preferenciaExercida = false;
-    Locatario[] public locatarios;
-    bool public aquisicaoRealizada = false;
     
+    // informações dos locatários
+    Locatario[] public locatarios;
+    
+    // aspectos do direito de preferência
+    uint256 public prazoPreferencia = now + 2592000; // Prazo do art. 28 da Lei Federal nº 8.245/1991
+    bool public preferenciaExercida = false;
+    
+    // status da aquisicaoConcluida
+    bool public precoAquisicaoQuitado = false;
+    bool public aquisicaoJaRealizada = false;
+    
+    // aspectos da denúncia das locações
+    uint256 public prazoDenunciaLocacao = now + 10368000; // Prazo do §2º do art. 8º da Lei Federal nº 8.245/1991
+    bool public todasAsLocacoesSaoPassiveisDeDenuncia = true;
+    bool public locacoesDenunciadas = false;
+   
+    // eventos
     event exercidaAPreferencia (address locatarioComprador);
     event aquisicaoConcluida ();
-    event locacaoDenunciada (address locatarioDenunciado, string imovelDesocupado);
+    event locacoesDenunciadasPeloComprador ();
+    event aluguelPago (address Locatario, uint256 );
     
     constructor (
-        string memory nomeComprador, 
-        string memory nomeVendedor,
         uint256 precoDeAquisicao,
         address payable contaDoVendedor
         )
         public {
-            comprador = nomeComprador;
-            vendedor = nomeVendedor;
             preco = precoDeAquisicao;
             contaDoVendedor = contaVendedor;
             valorParcela = preco/parcelas;
         }
         
-    function ajustaPreco (uint256 debitoIPTU) public {
+    function ajustaPreco (uint256 debitoIPTU) public somenteComprador {
         if (debitoIPTU > 0) {
         preco = preco - debitoIPTU;
         valorParcela = preco/parcelas;
@@ -110,23 +134,33 @@ contract CompraEVenda {
        emit exercidaAPreferencia (msg.sender);
     }
    
-   function realizarAquisicao () public payable {
+   function pagarParcela () public payable somenteComprador {
        require (now > prazoPreferencia, "Aguardar transcurso do prazo legal para exercício de preferência dos locatários.");
        require (!preferenciaExercida, "Direito de preferência exercido por locatário.");
-       require (msg.sender == contaComprador);
-       require (msg.value == preco, "Valor diferente do acordado.");
-       aquisicaoRealizada = true;
-       emit aquisicaoConcluida ();
+       require (msg.value == valorParcela, "Valor diferente do acordado.");
+       require (!precoAquisicaoQuitado);
+       parcelasPagas = parcelasPagas + 1;
+       if (parcelasPagas == parcelas) {
+           precoAquisicaoQuitado = true;
+           aquisicaoJaRealizada = true;
+           emit aquisicaoConcluida ();
+       }
     }
     
-    function verificarLocacaoPassivelDeDenuncia () view public returns (address[]) {
+    function verificarLocacaoNaoPassivelDeDenuncia () view public returns (bool) {
+        for (uint256 indice; indice < locatarios.length; indice ++) {
+            Locatario memory locTemp = locatarios[indice];
+            if (locTemp.contratoVigentePorPrazoDeterminado && locTemp.haClausulaDeVigencia && locTemp.contratoAverbadoNoRI) {
+                return true;
+            }
+        }
         
     }
     
     function denunciarLocacao () public {
         require (now <= prazoDenunciaLocacao, "Decorrido o prazo para denúncia da locação.");
-        require (aquisicaoRealizada == true);
-        require (locatarios.!contratoVigentePorPrazoDeterminado, locatatios.!haClausulaDeVigencia, locatarios.!contratoAverbadoNoRI, "A legislação não permite a denúncia desta locação."); // Requisitos do art. 8º da Lei Federal nº 8.245/1991
-        emit locacaoDenunciada (address locatarioDenunciado, string imovelDesocupado);
+        require (aquisicaoJaRealizada == true);
+        require (todasAsLocacoesSaoPassiveisDeDenuncia == true);
+        emit locacoesDenunciadasPeloComprador ();
     }
 }
