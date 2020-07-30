@@ -50,7 +50,7 @@ contract CompraEVenda {
     
     // aspectos da denúncia das locações
     uint256 public prazoDenunciaLocacao = now + 10368000; // Prazo do §2º do art. 8º da Lei Federal nº 8.245/1991
-    bool public haLocacaoNaoPassivelDeDenuncia = false;
+    bool public haLocacaoNaoPassivelDeDenuncia = false; // cf. requisitos do 8º da Lei Federal nº 8.245/1991
     bool public locacoesDenunciadas = false;
    
     // eventos
@@ -73,44 +73,64 @@ contract CompraEVenda {
         predio.push(imovelTemp);
     }
     
-    function ajustaPreco (uint256 debitoIPTU) public somenteComprador {
+    function ajustaPreco (uint256 debitoIPTU, uint256 multasAdministrativas, uint256 passivoAmbiental) public somenteComprador {
+        require (predio.length > 0);
         if (debitoIPTU > 0) {
-        preco = preco - debitoIPTU;
-        valorParcela = preco/parcelas;
+            preco = preco - debitoIPTU;
+            valorParcela = preco/parcelas;
+        }
+        if (multasAdministrativas > 0) {
+            preco = preco - multasAdministrativas;
+            valorParcela = preco/parcelas;
+        }
+        if (passivoAmbiental > 0) {
+            preco = preco - passivoAmbiental;
+            valorParcela = preco/parcelas;
         }
     }
    
     function registraLocatario (string memory _nomeLocatario, string memory _imovelAlugado, address _endereco, uint256 _valorAluguel, bool _contratoVigentePorPrazoDeterminado, bool _haClausuladeVigencia, bool _contratoRegistradoNoRI) public {
-       Locatario memory locTemp = Locatario (_nomeLocatario, true, _imovelAlugado, _endereco, _valorAluguel, _contratoVigentePorPrazoDeterminado, _haClausuladeVigencia, _contratoRegistradoNoRI);
-       locatarios.push(locTemp);
+        require (predio.length > 0);
+        Locatario memory locTemp = Locatario (_nomeLocatario, true, _imovelAlugado, _endereco, _valorAluguel, _contratoVigentePorPrazoDeterminado, _haClausuladeVigencia, _contratoRegistradoNoRI);
+        locatarios.push(locTemp);
     }
    
     function exercerPreferencia (uint256 _indiceImovel) public payable {
-       require (now <= prazoPreferencia, "Decorrido o prazo legal para exercício do direito de preferência."); // cf. art. 28 da Lei Federal nº 8.245/1991
-       require (msg.value == preco, "O direito de preferência deve ser exercício em igual condição a terceiros."); // cf. art. 27 da Lei Federal nº 8.245/1991
-       require (locatarios[_indiceImovel].endereco == msg.sender, "Operação somente autorizada para locatários.");
-       require (!preferenciaExercida, "Direito de preferência já exercido por outro locatário.");
-       preferenciaExercida = true;
-       emit exercidaAPreferencia (msg.sender);
+        require (predio.length > 0);
+        require (now <= prazoPreferencia, "Decorrido o prazo legal para exercício do direito de preferência."); // cf. art. 28 da Lei Federal nº 8.245/1991
+        require (msg.value == preco, "O direito de preferência deve ser exercício em igual condição a terceiros."); // cf. art. 27 da Lei Federal nº 8.245/1991
+        require (locatarios[_indiceImovel].endereco == msg.sender, "Operação somente autorizada para locatários.");
+        require (!preferenciaExercida, "Direito de preferência já exercido por outro locatário.");
+        preferenciaExercida = true;
+        emit exercidaAPreferencia (msg.sender);
     }
    
     function pagarParcela () public payable somenteComprador {
-       require (!preferenciaExercida, "Direito de preferência exercido por locatário.");
-       require (msg.value == valorParcela, "Valor diferente do acordado.");
-       require (!precoAquisicaoQuitado);
-       if (locatarios.length > 0) {
+        require (predio.length > 0);
+        require (!preferenciaExercida, "Direito de preferência exercido por locatário.");
+        require (msg.value == valorParcela, "Valor diferente do acordado.");
+        require (!precoAquisicaoQuitado);
+        if (locatarios.length > 0) {
             require (now > prazoPreferencia, "Aguardar transcurso do prazo legal para exercício de preferência dos locatários.");
-       }
-       parcelasPagas = parcelasPagas + 1;
-       if (parcelasPagas == parcelas) {
+        }
+        parcelasPagas = parcelasPagas + 1;
+        if (parcelasPagas == parcelas) {
            precoAquisicaoQuitado = true;
            contaVendedor.transfer(address(this).balance);
            aquisicaoJaRealizada = true;
            emit aquisicaoConcluida ();
-       }
+        }
+    }
+    
+    function desistirDaOperacao () public payable {
+        require (!preferenciaExercida);
+        require (!precoAquisicaoQuitado);
+        require (!aquisicaoJaRealizada);
+        comprador.transfer(address(this).balance);
     }
     
     function verificarLocacaoNaoPassivelDeDenuncia () public returns (bool) {
+        
         for (uint256 indice; indice < locatarios.length; indice ++) {
             Locatario memory locTemp = locatarios[indice];
             if (locTemp.contratoVigentePorPrazoDeterminado && locTemp.haClausulaDeVigencia && locTemp.contratoAverbadoNoRI) {
@@ -122,9 +142,11 @@ contract CompraEVenda {
     }
     
     function denunciarLocacao () public {
-        require (now <= prazoDenunciaLocacao, "Decorrido o prazo para denúncia da locação.");
+        require (predio.length > 0);
+        require (locatarios.length > 0); 
         require (aquisicaoJaRealizada == true);
         require (!haLocacaoNaoPassivelDeDenuncia);
+        require (now <= prazoDenunciaLocacao, "Decorrido o prazo para denúncia da locação.");
         emit locacoesDenunciadasPeloComprador ();
     }
 }
