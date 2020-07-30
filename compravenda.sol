@@ -25,7 +25,11 @@ contract compraevenda {
     Predio[] public predio;
     
     // informações do vendedor
-    address payable public contaVendedor;
+    address payable public vendedor;
+     modifier somenteVendedor(){
+        require(vendedor == msg.sender, "Somente o vendedor pode realizar esta operação.");
+        _;
+    }
     
     // informações do comprador
     address payable public comprador;
@@ -62,15 +66,17 @@ contract compraevenda {
     
     constructor (
         uint256 precoDeAquisicao,
-        address payable contaDoVendedor
+        address payable contaDoVendedor,
+        address payable contaDoComprador
         )
         public {
             preco = precoDeAquisicao;
-            contaDoVendedor = contaVendedor;
+            contaDoVendedor = vendedor;
+            contaDoComprador = comprador;
             valorParcela = preco/parcelas;
         }
         
-    function registraImovel (uint256 _numeroMatricula, string memory _numeroContribuinte, string memory _unidadeAutonoma) public somenteComprador {
+    function registraImovel (uint256 _numeroMatricula, string memory _numeroContribuinte, string memory _unidadeAutonoma) public somenteVendedor {
         Predio memory imovelTemp = Predio (_numeroMatricula, _numeroContribuinte, _unidadeAutonoma);
         predio.push(imovelTemp);
     }
@@ -83,7 +89,7 @@ contract compraevenda {
         }
     }
    
-    function registraLocatario (string memory _nomeLocatario, string memory _imovelAlugado, address _endereco, uint256 _valorAluguel, bool _contratoVigentePorPrazoDeterminado, bool _haClausuladeVigencia, bool _contratoAverbadoNoRI) public {
+    function registraLocatario (string memory _nomeLocatario, string memory _imovelAlugado, address _endereco, uint256 _valorAluguel, bool _contratoVigentePorPrazoDeterminado, bool _haClausuladeVigencia, bool _contratoAverbadoNoRI) somenteVendedor public {
         require (predio.length > 0);
         Locatario memory locTemp = Locatario (_nomeLocatario, true, _imovelAlugado, _endereco, _valorAluguel, _contratoVigentePorPrazoDeterminado, _haClausuladeVigencia, _contratoAverbadoNoRI);
         locatarios.push(locTemp);
@@ -96,7 +102,7 @@ contract compraevenda {
         require (locatarios[_indiceImovel].endereco == msg.sender, "Operação somente autorizada para locatários.");
         require (!preferenciaExercida, "Direito de preferência já exercido por outro locatário.");
         preferenciaExercida = true;
-        contaVendedor.transfer(address(this).balance);
+        vendedor.transfer(address(this).balance);
         emit exercidaAPreferencia (msg.sender);
     }
    
@@ -112,13 +118,13 @@ contract compraevenda {
         parcelasPagas = parcelasPagas + 1;
         if (parcelasPagas == parcelas) {
            precoAquisicaoQuitado = true;
-           contaVendedor.transfer(address(this).balance);
+           vendedor.transfer(address(this).balance);
            aquisicaoJaRealizada = true;
            emit aquisicaoConcluida ();
         }
     }
     
-    function desistirDaOperacao () public payable {
+    function desistirDaOperacao () public payable somenteComprador somenteVendedor {
         require (!preferenciaExercida);
         require (!precoAquisicaoQuitado);
         require (!aquisicaoJaRealizada);
