@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GLP-3.0
 pragma solidity 0.6.10;
 
-contract CompraEVenda {
+contract compraevenda {
 
     // informações dos locatários
     struct Locatario {
@@ -45,6 +45,7 @@ contract CompraEVenda {
     bool public preferenciaExercida = false;
     
     // status da aquisicao
+    bool public aquisicaoEmAndamento = true;
     bool public precoAquisicaoQuitado = false;
     bool public aquisicaoJaRealizada = false;
     
@@ -56,6 +57,7 @@ contract CompraEVenda {
     // eventos
     event exercidaAPreferencia (address locatarioComprador);
     event aquisicaoConcluida ();
+    event desistenciaDaOperacao (address desistente);
     event locacoesDenunciadasPeloComprador ();
     
     constructor (
@@ -75,16 +77,8 @@ contract CompraEVenda {
     
     function ajustaPreco (uint256 debitoIPTU, uint256 multasAdministrativas, uint256 passivoAmbiental) public somenteComprador {
         require (predio.length > 0);
-        if (debitoIPTU > 0) {
-            preco = preco - debitoIPTU;
-            valorParcela = preco/parcelas;
-        }
-        if (multasAdministrativas > 0) {
-            preco = preco - multasAdministrativas;
-            valorParcela = preco/parcelas;
-        }
-        if (passivoAmbiental > 0) {
-            preco = preco - passivoAmbiental;
+        if ((debitoIPTU + multasAdministrativas + passivoAmbiental) > 0) {
+            preco = preco - (debitoIPTU + multasAdministrativas + passivoAmbiental);
             valorParcela = preco/parcelas;
         }
     }
@@ -102,6 +96,7 @@ contract CompraEVenda {
         require (locatarios[_indiceImovel].endereco == msg.sender, "Operação somente autorizada para locatários.");
         require (!preferenciaExercida, "Direito de preferência já exercido por outro locatário.");
         preferenciaExercida = true;
+        contaVendedor.transfer(address(this).balance);
         emit exercidaAPreferencia (msg.sender);
     }
    
@@ -110,6 +105,7 @@ contract CompraEVenda {
         require (!preferenciaExercida, "Direito de preferência exercido por locatário.");
         require (msg.value == valorParcela, "Valor diferente do acordado.");
         require (!precoAquisicaoQuitado);
+        require (aquisicaoEmAndamento);
         if (locatarios.length > 0) {
             require (now > prazoPreferencia, "Aguardar transcurso do prazo legal para exercício de preferência dos locatários.");
         }
@@ -127,26 +123,30 @@ contract CompraEVenda {
         require (!precoAquisicaoQuitado);
         require (!aquisicaoJaRealizada);
         comprador.transfer(address(this).balance);
+        aquisicaoEmAndamento = false;
+        emit desistenciaDaOperacao (msg.sender);
     }
     
     function verificarLocacaoNaoPassivelDeDenuncia () public returns (bool) {
-        
         for (uint256 indice; indice < locatarios.length; indice ++) {
             Locatario memory locTemp = locatarios[indice];
             if (locTemp.contratoVigentePorPrazoDeterminado && locTemp.haClausulaDeVigencia && locTemp.contratoAverbadoNoRI) {
                 haLocacaoNaoPassivelDeDenuncia = true;
                 return true;
             }
+            else {
+                return false;
+            }
         }
         
     }
     
-    function denunciarLocacao () public {
+    function denunciarLocacoes () public {
         require (predio.length > 0);
         require (locatarios.length > 0); 
-        require (aquisicaoJaRealizada == true);
+        require (aquisicaoJaRealizada);
         require (!haLocacaoNaoPassivelDeDenuncia);
-        require (now <= prazoDenunciaLocacao, "Decorrido o prazo para denúncia da locação.");
+        require (now <= prazoDenunciaLocacao, "Decorrido o prazo para denúncia das locações.");
         emit locacoesDenunciadasPeloComprador ();
     }
 }
