@@ -75,17 +75,17 @@ contract compraevenda {
         predio.push(imovelTemp);
     }
     
-    function ajustaPreco (uint256 debitoIPTU, uint256 multasAdministrativas, uint256 passivoAmbiental) public somenteComprador {
+    function ajustaPreco (uint256 debitoIPTU, uint256 multasAdministrativas, uint256 debitosDeCondominio, uint256 passivoAmbiental) public somenteComprador {
         require (predio.length > 0);
-        if ((debitoIPTU + multasAdministrativas + passivoAmbiental) > 0) {
-            preco = preco - (debitoIPTU + multasAdministrativas + passivoAmbiental);
+        if ((debitoIPTU + multasAdministrativas + debitosDeCondominio + passivoAmbiental) > 0) {
+            preco = preco - (debitoIPTU + multasAdministrativas + debitosDeCondominio + passivoAmbiental);
             valorParcela = preco/parcelas;
         }
     }
    
-    function registraLocatario (string memory _nomeLocatario, string memory _imovelAlugado, address _endereco, uint256 _valorAluguel, bool _contratoVigentePorPrazoDeterminado, bool _haClausuladeVigencia, bool _contratoRegistradoNoRI) public {
+    function registraLocatario (string memory _nomeLocatario, string memory _imovelAlugado, address _endereco, uint256 _valorAluguel, bool _contratoVigentePorPrazoDeterminado, bool _haClausuladeVigencia, bool _contratoAverbadoNoRI) public {
         require (predio.length > 0);
-        Locatario memory locTemp = Locatario (_nomeLocatario, true, _imovelAlugado, _endereco, _valorAluguel, _contratoVigentePorPrazoDeterminado, _haClausuladeVigencia, _contratoRegistradoNoRI);
+        Locatario memory locTemp = Locatario (_nomeLocatario, true, _imovelAlugado, _endereco, _valorAluguel, _contratoVigentePorPrazoDeterminado, _haClausuladeVigencia, _contratoAverbadoNoRI);
         locatarios.push(locTemp);
     }
    
@@ -104,8 +104,8 @@ contract compraevenda {
         require (predio.length > 0);
         require (!preferenciaExercida, "Direito de preferência exercido por locatário.");
         require (msg.value == valorParcela, "Valor diferente do acordado.");
-        require (!precoAquisicaoQuitado);
-        require (aquisicaoEmAndamento);
+        require (!precoAquisicaoQuitado, "O preço acordado já foi quitado.");
+        require (aquisicaoEmAndamento, "Uma das partes desistiu de prosseguir com a transação.");
         if (locatarios.length > 0) {
             require (now > prazoPreferencia, "Aguardar transcurso do prazo legal para exercício de preferência dos locatários.");
         }
@@ -134,11 +134,7 @@ contract compraevenda {
                 haLocacaoNaoPassivelDeDenuncia = true;
                 return true;
             }
-            else {
-                return false;
-            }
         }
-        
     }
     
     function denunciarLocacoes () public {
